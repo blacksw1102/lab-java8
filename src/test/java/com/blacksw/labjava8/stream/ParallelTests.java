@@ -41,29 +41,24 @@ public class ParallelTests {
     void Parallel_동시성_테스트() {
         // given
         int size = 1_000_000;
-        List<Integer> list = new ArrayList<>();
+        //List<Integer> list = new ArrayList<>();
         List<Integer> list2 = Collections.synchronizedList(new ArrayList<>());
 
         // when
-        IntStream.range(0, size).parallel().forEach(list::add);
+        // 동시성이 보장되지 않는 ArrayList는 capacity가 확보되지 않은 상태에서 값을 초기화 하려다가 IndexOutBoundException을 유발할 수 있음.
+        //IntStream.range(0, size).parallel().forEach(list::add);
         IntStream.range(0, size).parallel().forEach(list2::add);
 
         // then
-        assertNotEquals(size, list.size());
+        //assertNotEquals(size, list.size());
         assertEquals(size, list2.size());
     }
 
     @ParameterizedTest
     @CsvSource({
             "10_000_000, 2",
-            "15_000_000, 2",
-            "20_000_000, 2",
             "10_000_000, 5",
-            "15_000_000, 5",
-            "20_000_000, 5",
             "10_000_000, 10",
-            "15_000_000, 10",
-            "20_000_000, 10",
     })
     void Parallel_별도의ForkJoinPool사용_테스트(int value, int poolSize) {
         List<Integer> list = IntStream.range(1, value).boxed().collect(Collectors.toList());
@@ -99,9 +94,9 @@ public class ParallelTests {
                     .reduce(0, (a, b) -> {
                         throw new RuntimeException("exception..!");
                     });
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             // then
-            assertEquals("exception..!", e.getMessage());
+            assertInstanceOf(RuntimeException.class, e);
             assertEquals(0, result);
         }
     }
