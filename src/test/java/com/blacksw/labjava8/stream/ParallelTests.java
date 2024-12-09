@@ -23,8 +23,10 @@ public class ParallelTests {
     @ParameterizedTest
     @ValueSource(ints = {1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000})
     void Parallel_병렬처리_테스트(int value) {
+        // given
         List<Integer> list = IntStream.rangeClosed(1, value).boxed().collect(Collectors.toList());
 
+        // when
         long start1 = System.currentTimeMillis();
         long sum1 = list.stream().reduce(0, Integer::sum);
         long end1 = System.currentTimeMillis();
@@ -33,6 +35,7 @@ public class ParallelTests {
         long sum2 = list.stream().parallel().reduce(0, Integer::sum);
         long end2 = System.currentTimeMillis();
 
+        // then
         System.out.println("single result : " + (end1 - start1));
         System.out.println("parallel result : " + (end2 - start2));
     }
@@ -41,17 +44,13 @@ public class ParallelTests {
     void Parallel_동시성_테스트() {
         // given
         int size = 1_000_000;
-        //List<Integer> list = new ArrayList<>();
-        List<Integer> list2 = Collections.synchronizedList(new ArrayList<>());
+        List<Integer> list = Collections.synchronizedList(new ArrayList<>());
 
         // when
-        // 동시성이 보장되지 않는 ArrayList는 capacity가 확보되지 않은 상태에서 값을 초기화 하려다가 IndexOutBoundException을 유발할 수 있음.
-        //IntStream.range(0, size).parallel().forEach(list::add);
-        IntStream.range(0, size).parallel().forEach(list2::add);
+        IntStream.range(0, size).parallel().forEach(list::add);
 
         // then
-        //assertNotEquals(size, list.size());
-        assertEquals(size, list2.size());
+        assertEquals(size, list.size());
     }
 
     @ParameterizedTest
@@ -60,24 +59,30 @@ public class ParallelTests {
             "10_000_000, 5",
             "10_000_000, 10",
     })
-    void Parallel_별도의ForkJoinPool사용_테스트(int value, int poolSize) {
+    void Parallel_Custom_ForkJoinPool_적용_테스트(int value, int poolSize) {
+        // given
         List<Integer> list = IntStream.range(1, value).boxed().collect(Collectors.toList());
 
+        // when
+        // jvm이 제공해주는 default ForkJoinPool 적용
         long start1 = System.currentTimeMillis();
         long result1 = list.parallelStream().mapToInt(i -> i).sum();
         long end1 = System.currentTimeMillis();
 
+        // Custom ForkJoinPool 적용
         ForkJoinPool forkJoinPool = new ForkJoinPool(poolSize);
         long start2 = System.currentTimeMillis();
         long result2 = forkJoinPool.submit(() -> list.parallelStream().mapToInt(i -> i).sum()).join();
         long end2 = System.currentTimeMillis();
 
+        // then
         System.out.println("Parallel : " + (end2 - start2));
         System.out.println("ForkJoinPool : " + (end1 - start1));
     }
 
+    // ForkJoinPool에서 돌고 있는 쓰레드는 쓰레드 명에서 ForkJoinPool 키워드를 확인 가능.
     @Test
-    void Prallel_공용_FormJoinPool_적용_확인_테스트() {
+    void Prallel_Default_FormJoinPool_적용_확인_테스트() {
         IntStream.range(1, 10).parallel().forEach(i -> {
             System.out.println("CurrentThread : " + Thread.currentThread().getName());
         });
@@ -111,14 +116,13 @@ public class ParallelTests {
                 .parallel()
                 .reduce(0, (a, b) -> {
                     int sum = 0;
-                   try {
-                       if (b == 3) {
-                           throw new RuntimeException("exception..!");
-                       }
-                       sum = Integer.sum(a, b);
-                   } catch (RuntimeException ignored) {
-                   }
-                   return sum;
+                    try {
+                        if (b == 3) {
+                            throw new RuntimeException("exception..!");
+                        }
+                        sum = Integer.sum(a, b);
+                    } catch (RuntimeException ignored) {}
+                    return sum;
                 });
 
         // then

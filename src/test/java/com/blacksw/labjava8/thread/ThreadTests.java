@@ -37,9 +37,11 @@ public class ThreadTests {
     void Thread_runnable_예외처리_테스트() throws InterruptedException {
         Runnable task = () -> {
             try {
+                // when
                 throw new RuntimeException("exception..!");
             } catch (RuntimeException e) {
-                System.out.println(e.getMessage());
+                // then
+                assertEquals("exception..!", e.getMessage());
             }
         };
         ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -77,15 +79,18 @@ public class ThreadTests {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         Future<Void> future = executorService.submit(task);
 
+        // when
+        String exceptionMessage = "";
         try {
-            // when
             future.get();
-        } catch (ExecutionException e) {
-            // then
-            assertInstanceOf(RuntimeException.class, e.getCause());
-        } catch (Exception ignored) { }
+        } catch (Exception e) {
+            exceptionMessage = e.getCause().getMessage();
+        } finally {
+            executorService.shutdown();
+        }
 
-        executorService.shutdown();
+        // then
+        assertEquals("exception..!", exceptionMessage);
     }
 
     // 멀티쓰레드에서 작업이 처리되는 순서는 ExecutorService에서 submit한 순서와는 다를 수 있다.
@@ -111,18 +116,17 @@ public class ThreadTests {
 
     @Test
     void Thread_멀티스레드_callable_테스트() throws InterruptedException, ExecutionException {
+        // given
         ExecutorService executorService = Executors.newFixedThreadPool(100);
-
-        // when
         List<Callable<Integer>> tasks = new ArrayList<>();
         for (int i = 1; i <= 1000; i++) {
             int value = i;
             tasks.add(() -> value);
         }
 
+        // when
         List<Future<Integer>> results = executorService.invokeAll(tasks);
         executorService.shutdown();
-
         int sum = 0 ;
         for (Future<Integer> result : results) {
             sum += result.get();

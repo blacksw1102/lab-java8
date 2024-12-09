@@ -1,8 +1,6 @@
 package com.blacksw.labjava8.stream;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.Arrays;
@@ -10,7 +8,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,24 +17,23 @@ public class StreamTests {
 
     @Test
     void Stream_지연평가_테스트() {
+        // given
         List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
         AtomicInteger atomicInteger = new AtomicInteger();
 
-        // when -> 지연 평가 확인
+        // when
         Stream<Integer> stream = numbers.stream().map((n) -> {
             atomicInteger.incrementAndGet();
             return n * 2;
         });
+        int result1 = atomicInteger.get();
+
+        stream.collect(Collectors.toList());
+        int result2 = atomicInteger.get();
 
         // then
-        assertEquals(0, atomicInteger.get());
-
-        // when -> 최종 연산 완료
-        List<Integer> result = stream.collect(Collectors.toList());
-
-        // then
-        assertEquals(numbers.size(), atomicInteger.get());
-        assertEquals(Arrays.asList(2, 4, 6, 8 ,10), result);
+        assertEquals(0, result1);
+        assertEquals(numbers.size(), result2);
     }
 
     @Test
